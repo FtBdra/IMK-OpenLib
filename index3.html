@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Open Library Telkom University - Redesign 2.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        telkom: {
+                            red: '#cc141a',
+                            dark: '#1a1a1a',
+                            light: '#f8f9fa',
+                            gray: '#6c757d'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Modal & Feedback Animations */
+        .modal-enter { opacity: 0; transform: scale(0.95); }
+        .modal-enter-active { opacity: 1; transform: scale(1); transition: all 0.2s ease-out; }
+        
+        .toast-enter { transform: translateY(100%); opacity: 0; }
+        .toast-active { transform: translateY(0); opacity: 1; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+
+        .view-section { display: none; animation: fadeIn 0.3s ease-in-out; }
+        .view-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .loader { border-top-color: #cc141a; animation: spin 1s linear infinite; }
+
+        /* Custom Radio Button Styling */
+        .custom-radio { accent-color: #cc141a; width: 1.25rem; height: 1.25rem; cursor: pointer; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans antialiased min-h-screen flex flex-col relative overflow-x-hidden">
+
+    <!-- Global Loading Overlay -->
+    <div id="systemLoader" class="fixed inset-0 bg-white bg-opacity-80 z-[100] hidden flex-col items-center justify-center backdrop-blur-sm">
+        <div class="w-12 h-12 border-4 border-gray-200 rounded-full loader mb-4"></div>
+        <p id="loaderText" class="text-gray-700 font-medium animate-pulse">Memproses permintaan Anda...</p>
+    </div>
+
+    <!-- GLOBAL NAVIGATION BAR -->
+    <nav class="bg-white shadow-sm sticky top-0 z-40 border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-20">
+                <div class="flex items-center cursor-pointer" onclick="switchView('beranda')">
+                    <div class="flex-shrink-0 flex items-center gap-3" aria-label="Beranda">
+                        <div class="bg-telkom-red text-white p-2 rounded-lg shadow-sm">
+                            <i class="fas fa-book-open text-xl"></i>
+                        </div>
+                        <div>
+                            <h1 class="font-bold text-xl leading-tight text-telkom-dark">Open Library</h1>
+                            <p class="text-[10px] text-telkom-gray uppercase tracking-widest font-semibold">Telkom University</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="hidden md:ml-10 md:flex md:space-x-8">
+                    <button onclick="switchView('beranda')" id="nav-beranda" class="nav-link border-telkom-red text-telkom-dark inline-flex items-center px-1 pt-1 border-b-2 text-sm font-semibold transition-colors">
+                        Beranda
+                    </button>
+                    <button onclick="switchView('katalog')" id="nav-katalog" class="nav-link border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
+                        Katalog
+                    </button>
+                    <button onclick="switchView('epublications')" id="nav-epublications" class="nav-link border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
+                        E-Publications
+                    </button>
+                    <div class="relative group inline-flex items-center">
+                        <button onclick="switchView('layanan')" id="nav-layanan" class="nav-link border-transparent text-gray-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
+                            Layanan Lainnya <i class="fas fa-chevron-down ml-1 text-[10px]"></i>
+                        </button>
+                        <div class="absolute left-0 top-full w-56 bg-white shadow-lg border border-gray-100 rounded-md py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                            <button onclick="switchView('layanan', 'bebas')" class="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-telkom-red transition"><i class="fas fa-file-alt w-5 text-gray-400"></i> Pengajuan Bebas Pustaka</button>
+                            <button onclick="switchView('layanan', 'donasi')" class="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-telkom-red transition"><i class="fas fa-hand-holding-heart w-5 text-gray-400"></i> Donasi Buku</button>
+                            <button onclick="switchView('layanan', 'panduan')" class="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-telkom-red transition"><i class="fas fa-info-circle w-5 text-gray-400"></i> Panduan Mahasiswa</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center" id="authSection">
+                    <button onclick="openModal('modal-login')" class="bg-gray-100 hover:bg-gray-200 text-telkom-dark px-4 py-2 rounded-md text-sm font-medium transition flex items-center gap-2 border border-gray-200 shadow-sm active:scale-95">
+                        <i class="far fa-user-circle text-lg text-gray-600"></i> Login SSO
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- BREADCRUMBS -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 w-full">
+        <nav class="flex text-sm text-gray-500" aria-label="Breadcrumb">
+            <ol class="inline-flex items-center space-x-1 md:space-x-3">
+                <li class="inline-flex items-center">
+                    <button onclick="switchView('beranda')" class="hover:text-telkom-red transition flex items-center"><i class="fas fa-home mr-2"></i>Beranda</button>
+                </li>
+                <li>
+                    <div class="flex items-center">
+                        <i class="fas fa-chevron-right text-[10px] mx-2"></i>
+                        <span id="breadcrumb-current" class="text-gray-800 font-medium">Eksplorasi & Layanan</span>
+                    </div>
+                </li>
+            </ol>
+        </nav>
+    </div>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 w-full">
+        
+        <!-- ==================== VIEW: BERANDA ==================== -->
+        <div id="view-beranda" class="view-section active">
+            
+            <!-- SEARCH SECTION -->
+            <section class="text-center py-12 bg-white rounded-2xl shadow-sm border border-gray-100 mb-12 relative z-10">
+                <h2 class="text-4xl font-extrabold text-telkom-dark mb-4 tracking-tight">Eksplorasi Pengetahuan</h2>
+                <p class="text-gray-500 mb-8 max-w-2xl mx-auto text-lg">Temukan koleksi buku fisik, e-book, jurnal, dan tugas akhir dalam satu pencarian terpusat.</p>
+                
+                <div class="max-w-3xl mx-auto px-4 relative">
+                    <form onsubmit="event.preventDefault(); executeSearch();" class="relative flex items-center group">
+                        <i class="fas fa-search absolute left-5 text-gray-400 text-lg group-focus-within:text-telkom-red transition"></i>
+                        <input type="text" id="mainSearchInput"
+                               class="w-full pl-14 pr-32 py-4 rounded-full border-2 border-gray-200 focus:outline-none focus:border-telkom-red text-lg shadow-sm transition hover:border-gray-300" 
+                               placeholder="Ketik judul buku, penulis, atau ISBN..." autocomplete="off">
+                        
+                        <button type="button" class="absolute right-28 text-gray-400 hover:text-telkom-red transition p-2" title="Pencarian Suara">
+                            <i class="fas fa-microphone"></i>
+                        </button>
+
+                        <button type="submit" class="absolute right-2 top-2 bottom-2 bg-telkom-red hover:bg-red-700 text-white px-8 rounded-full font-medium transition shadow-md active:scale-95 flex items-center gap-2">
+                            Cari
+                        </button>
+                    </form>
+
+                    <!-- Top Results Dropdown -->
+                    <div id="searchSuggestions" class="hidden absolute top-full left-4 right-4 mt-2 bg-white rounded-xl shadow-2xl border border-gray-100 text-left overflow-hidden z-50">
+                        <div class="p-2 border-b border-gray-100 bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wider">Hasil Teratas</div>
+                        <ul class="max-h-64 overflow-y-auto">
+                            <li onclick="executeSearch('Algoritma Pemrograman Berorientasi Objek', 'Buku Fisik', 'Tersedia (Rak A-12)', 'Budi Raharjo', '2024', 'Buku ini membahas konsep dasar algoritma dan pemrograman berorientasi objek...')" class="px-4 py-3 hover:bg-red-50 cursor-pointer flex items-center gap-3 border-b border-gray-50 transition">
+                                <div class="bg-gray-100 p-2 rounded text-gray-500"><i class="fas fa-book"></i></div>
+                                <div>
+                                    <p class="text-sm font-semibold text-gray-800">Algoritma & Pemrograman Berorientasi Objek</p>
+                                    <p class="text-xs text-green-600 font-medium">Buku Fisik • Tersedia di Rak A-12</p>
+                                </div>
+                            </li>
+                            <li onclick="executeSearch('Machine Learning for Software Engineering', 'E-Book', 'Akses Digital', 'Dr. Sarah', '2025', 'Penerapan ML dalam rekayasa perangkat lunak modern.')" class="px-4 py-3 hover:bg-red-50 cursor-pointer flex items-center gap-3 border-b border-gray-50 transition">
+                                <div class="bg-blue-100 p-2 rounded text-blue-500"><i class="fas fa-file-pdf"></i></div>
+                                <div>
+                                    <p class="text-sm font-semibold text-gray-800">Machine Learning for Software Engineering</p>
+                                    <p class="text-xs text-gray-500">E-Book • Akses Digital</p>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="flex justify-between items-center mt-4 text-sm">
+                        <div class="flex gap-2 items-center">
+                            <span class="text-gray-500 text-xs font-semibold uppercase">Populer:</span>
+                            <!-- Menambahkan onClick untuk pencarian populer otomatis -->
+                            <span onclick="executeSearch('Tugas Akhir Informatika', 'Tugas Akhir', 'Tersedia Digital', 'Mahasiswa Tel-U', '2023', 'Kumpulan tugas akhir mahasiswa fakultas informatika.')" class="px-3 py-1 bg-gray-100 text-gray-600 rounded-full cursor-pointer hover:bg-gray-200 transition">Tugas Akhir</span>
+                            <span onclick="executeSearch('Data Science for Business', 'Buku Fisik', 'Tersedia (Rak C-1)', 'Foster Provost', '2022', 'Buku fundamental untuk data science di industri bisnis.')" class="px-3 py-1 bg-gray-100 text-gray-600 rounded-full cursor-pointer hover:bg-gray-200 transition">Data Science</span>
+                        </div>
+                        <button class="text-telkom-red hover:text-red-800 font-medium flex items-center gap-1 transition p-1 rounded hover:bg-red-50" onclick="toggleAdvancedSearch()">
+                            <i class="fas fa-sliders-h"></i> Pencarian Lanjutan
+                        </button>
+                    </div>
+
+                    <!-- Advanced Search -->
+                    <div id="advancedSearch" class="hidden mt-4 p-5 bg-white shadow-lg rounded-xl border border-gray-100 text-left transition-all relative z-40">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Tahun Publikasi</label>
+                                <!-- Validasi tahun (min=1900) -->
+                                <input type="number" id="advTahun" min="1900" max="2099" placeholder="Cth: 2024 (Kosong = Semua)" class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-telkom-red focus:ring-1 focus:ring-telkom-red transition">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Jenis Koleksi</label>
+                                <select class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-telkom-red focus:ring-1 focus:ring-telkom-red transition cursor-pointer">
+                                    <option>Semua Jenis</option><option>Buku Fisik</option><option>E-Book</option><option>Jurnal</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Fakultas</label>
+                                <!-- 7 Fakultas Telkom University -->
+                                <select class="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-telkom-red focus:ring-1 focus:ring-telkom-red transition cursor-pointer">
+                                    <option>Semua Fakultas</option>
+                                    <option>FTE (Teknik Elektro)</option>
+                                    <option>FRI (Rekayasa Industri)</option>
+                                    <option>FIF (Informatika)</option>
+                                    <option>FEB (Ekonomi & Bisnis)</option>
+                                    <option>FKS (Komunikasi & Bisnis)</option>
+                                    <option>FIK (Industri Kreatif)</option>
+                                    <option>FIT (Ilmu Terapan)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- QUICK SERVICES CARDS -->
+            <section class="mb-12 relative z-0">
+                <div class="flex items-center gap-4 mb-6">
+                    <h3 class="text-2xl font-bold text-telkom-dark">Layanan Mandiri</h3>
+                    <div class="h-1 w-12 bg-telkom-red rounded"></div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div onclick="openModal('modal-reservasi')" class="bg-white rounded-xl p-6 border border-gray-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group flex flex-col justify-between h-full relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-full h-1 bg-telkom-red transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></div>
+                        <div>
+                            <div class="w-14 h-14 rounded-xl bg-red-50 flex items-center justify-center mb-4 group-hover:bg-telkom-red transition-colors duration-300">
+                                <i class="far fa-calendar-alt text-2xl text-telkom-red group-hover:text-white transition-colors"></i>
+                            </div>
+                            <h4 class="text-lg font-bold text-gray-800 mb-2">Reservasi Ruangan</h4>
+                            <p class="text-sm text-gray-500 mb-6 leading-relaxed">Pesan ruang diskusi atau ruang baca secara online tanpa antre.</p>
+                        </div>
+                        <span class="text-telkom-red font-semibold text-sm flex items-center gap-2">Pesan Sekarang <i class="fas fa-arrow-right text-xs group-hover:translate-x-1 transition-transform"></i></span>
+                    </div>
+
+                    <div onclick="openModal('modal-ebook')" class="bg-white rounded-xl p-6 border border-gray-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group flex flex-col justify-between h-full relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-full h-1 bg-blue-500 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></div>
+                        <div>
+                            <div class="w-14 h-14 rounded-xl bg-gray-50 flex items-center justify-center mb-4 group-hover:bg-blue-500 transition-colors duration-300">
+                                <i class="fas fa-book-reader text-2xl text-gray-600 group-hover:text-white transition-colors"></i>
+                            </div>
+                            <h4 class="text-lg font-bold text-gray-800 mb-2">Koleksi E-Book</h4>
+                            <p class="text-sm text-gray-500 mb-6 leading-relaxed">Akses rak digital Anda: riwayat bacaan, mark favorit, dll.</p>
+                        </div>
+                        <span class="text-gray-800 font-semibold text-sm group-hover:text-blue-600 flex items-center gap-2 transition-colors">Buka Rak Digital <i class="fas fa-arrow-right text-xs group-hover:translate-x-1 transition-transform"></i></span>
+                    </div>
+
+                    <div onclick="openModal('modal-status')" class="bg-white rounded-xl p-6 border border-gray-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group flex flex-col justify-between h-full relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-full h-1 bg-green-500 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></div>
+                        <div>
+                            <div class="w-14 h-14 rounded-xl bg-gray-50 flex items-center justify-center mb-4 group-hover:bg-green-500 transition-colors duration-300">
+                                <i class="far fa-user text-2xl text-gray-600 group-hover:text-white transition-colors"></i>
+                            </div>
+                            <h4 class="text-lg font-bold text-gray-800 mb-2">Status Pinjaman</h4>
+                            <p class="text-sm text-gray-500 mb-6 leading-relaxed">Cek tenggat waktu buku fisik yang dipinjam beserta sisa hari.</p>
+                        </div>
+                        <span class="text-gray-800 font-semibold text-sm group-hover:text-green-600 flex items-center gap-2 transition-colors">Cek Status Buku <i class="fas fa-arrow-right text-xs group-hover:translate-x-1 transition-transform"></i></span>
+                    </div>
+
+                    <div onclick="openModal('modal-tanya')" class="bg-white rounded-xl p-6 border border-gray-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group flex flex-col justify-between h-full relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-full h-1 bg-orange-500 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></div>
+                        <div>
+                            <div class="w-14 h-14 rounded-xl bg-gray-50 flex items-center justify-center mb-4 group-hover:bg-orange-500 transition-colors duration-300">
+                                <i class="far fa-comment-dots text-2xl text-gray-600 group-hover:text-white transition-colors"></i>
+                            </div>
+                            <h4 class="text-lg font-bold text-gray-800 mb-2">Tanya Pustakawan</h4>
+                            <p class="text-sm text-gray-500 mb-6 leading-relaxed">Bantuan pencarian referensi dan FAQ dari pustakawan.</p>
+                        </div>
+                        <span class="text-gray-800 font-semibold text-sm group-hover:text-orange-600 flex items-center gap-2 transition-colors">Lihat FAQ / Chat <i class="fas fa-arrow-right text-xs group-hover:translate-x-1 transition-transform"></i></span>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- ==================== VIEW: KATALOG ==================== -->
+        <div id="view-katalog" class="view-section">
+            
+            <!-- Dynamic Search Result Block (Hidden by default) -->
+            <div id="searchResults" class="hidden mb-12">
+                <h2 class="text-2xl font-bold text-telkom-dark mb-4 border-b border-gray-200 pb-2">Detail / Hasil Pencarian</h2>
+                
+                <div class="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row overflow-hidden relative">
+                    <!-- Close button for detail view -->
+                    <button onclick="document.getElementById('searchResults').classList.add('hidden'); document.getElementById('defaultCatalog').classList.remove('hidden');" class="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition"><i class="fas fa-times text-xl"></i></button>
+
+                    <div class="w-full md:w-48 bg-gray-100 flex items-center justify-center p-6 border-r border-gray-200 shrink-0">
+                        <i id="srIcon" class="fas fa-book text-6xl text-gray-300"></i>
+                    </div>
+                    <div class="p-6 flex-grow flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-start mb-2 pr-8">
+                                <h3 class="text-xl font-bold text-gray-800" id="srTitle">Judul Buku</h3>
+                                <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold border border-green-200 whitespace-nowrap" id="srStatusBadge">Tersedia</span>
+                            </div>
+                            <p class="text-sm text-gray-600 mb-1">Penulis: <span id="srAuthor" class="font-semibold">Nama Penulis</span> | Tahun: <span id="srYear">2024</span></p>
+                            <p class="text-sm font-semibold text-telkom-red mb-4" id="srLocationWrap">Lokasi: <span id="srLocation">Rak -</span> <i class="fas fa-map-marker-alt"></i></p>
+                            <p class="text-sm text-gray-500 line-clamp-3 mb-4" id="srDesc">Deskripsi singkat buku akan tampil di sini...</p>
+                        </div>
+                        <div class="flex flex-wrap gap-3">
+                            <button id="btnPinjam" class="px-4 py-2 bg-telkom-red text-white text-sm font-bold rounded-lg hover:bg-red-800 transition flex items-center gap-2" onclick="showToast('success', 'Permintaan Terkirim', 'Pustakawan akan menyiapkan buku ini untuk Anda ambil.')"><i class="fas fa-hand-holding"></i> Pinjam ke Pustakawan</button>
+                            <button id="btnBaca" class="px-4 py-2 bg-blue-50 text-blue-700 text-sm font-bold rounded-lg hover:bg-blue-100 transition border border-blue-200 flex items-center gap-2"><i class="fas fa-laptop-code"></i> Baca Online (E-Book)</button>
+                            <button class="px-4 py-2 bg-gray-50 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-100 transition border border-gray-200 flex items-center gap-2" onclick="showToast('success', 'Berhasil', 'Ditambahkan ke daftar Ingin Dibaca')"><i class="far fa-bookmark"></i> Tambah Koleksi</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Default Catalog View -->
+            <div id="defaultCatalog">
+                <h2 class="text-2xl font-bold text-telkom-dark mb-6">Rekomendasi Koleksi</h2>
+                
+                <div class="mb-10">
+                    <h3 class="text-lg font-bold text-gray-700 mb-4 flex items-center gap-2"><i class="fas fa-fire text-orange-500"></i> Terfavorit & Banyak Dibaca</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                        <!-- Interaktif Book Card -->
+                        <div onclick="executeSearch('Clean Code: A Handbook of Agile Software Craftsmanship', 'Buku Fisik', 'Habis Dipinjam', 'Robert C. Martin', '2008', 'Buku wajib bagi software engineer untuk menulis kode yang bersih dan mudah di-maintain.')" class="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-xl transition group cursor-pointer">
+                            <div class="h-48 bg-gray-100 rounded-lg mb-3 flex items-center justify-center relative overflow-hidden">
+                                <div class="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <span class="text-white font-bold text-sm bg-telkom-red px-3 py-1 rounded-full">Lihat Detail</span>
+                                </div>
+                                <i class="fas fa-book text-4xl text-gray-400"></i>
+                            </div>
+                            <h4 class="font-bold text-sm text-gray-800 mb-1 group-hover:text-telkom-red transition line-clamp-2">Clean Code: A Handbook of Agile</h4>
+                            <p class="text-xs text-gray-500 mb-2">Robert C. Martin</p>
+                            <span class="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded font-bold border border-red-200">Habis Dipinjam</span>
+                        </div>
+
+                        <div onclick="executeSearch('Data Science for Business', 'E-Book', 'Akses Digital', 'Foster Provost', '2013', 'Penjelasan komprehensif mengenai penerapan ilmu data dalam menyelesaikan masalah bisnis terapan.')" class="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-xl transition group cursor-pointer">
+                            <div class="h-48 bg-gray-100 rounded-lg mb-3 flex items-center justify-center relative overflow-hidden">
+                                <div class="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <span class="text-white font-bold text-sm bg-telkom-red px-3 py-1 rounded-full">Lihat Detail</span>
+                                </div>
+                                <i class="fas fa-file-pdf text-4xl text-blue-400"></i>
+                            </div>
+                            <h4 class="font-bold text-sm text-gray-800 mb-1 group-hover:text-telkom-red transition line-clamp-2">Data Science for Business</h4>
+                            <p class="text-xs text-gray-500 mb-2">Foster Provost</p>
+                            <span class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-bold border border-blue-200">E-Book Tersedia</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-lg font-bold text-gray-700 mb-4 flex items-center gap-2"><i class="fas fa-star text-yellow-500"></i> Buku Baru Terbit</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                        <div onclick="executeSearch('AI in Healthcare 2025', 'Buku Fisik', 'Tersedia (Rak B-01)', 'Dr. Sarah Johnson', '2025', 'Menelusuri perkembangan kecerdasan buatan dalam diagnosis medis modern.')" class="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-xl transition group cursor-pointer">
+                            <div class="h-48 bg-gray-100 rounded-lg mb-3 flex items-center justify-center relative overflow-hidden">
+                                <div class="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <span class="text-white font-bold text-sm bg-telkom-red px-3 py-1 rounded-full">Lihat Detail</span>
+                                </div>
+                                <i class="fas fa-book text-4xl text-gray-400"></i>
+                            </div>
+                            <h4 class="font-bold text-sm text-gray-800 mb-1 group-hover:text-telkom-red transition line-clamp-2">AI in Healthcare 2025</h4>
+                            <p class="text-xs text-gray-500 mb-2">Dr. Sarah Johnson</p>
+                            <span class="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded font-bold border border-green-200">Tersedia</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== VIEW: E-PUBLICATIONS ==================== -->
+        <div id="view-epublications" class="view-section">
+            <h2 class="text-3xl font-bold text-telkom-dark mb-2">Database Jurnal & Literatur</h2>
+            <p class="text-gray-500 mb-8">Akses publikasi internasional dan nasional untuk kebutuhan riset, skripsi, maupun penelitian akademik Anda.</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition">
+                    <div class="w-16 h-16 bg-blue-900 rounded-xl flex items-center justify-center text-white font-bold text-2xl mb-4">IEEE</div>
+                    <h3 class="text-lg font-bold text-gray-800 mb-2">IEEE Xplore Digital Library</h3>
+                    <p class="text-sm text-gray-600 mb-4 line-clamp-3">Menyediakan akses full-text ke jurnal, prosiding konferensi, dan standar teknis di bidang ilmu komputer dan teknik elektro.</p>
+                    <button class="w-full py-2 bg-gray-50 text-blue-700 border border-blue-200 rounded-lg font-bold text-sm hover:bg-blue-50 transition" onclick="showToast('success', 'Membuka Database', 'Mengalihkan ke IEEE Xplore...')">Akses Jurnal <i class="fas fa-external-link-alt text-xs ml-1"></i></button>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition">
+                    <div class="w-16 h-16 bg-orange-600 rounded-xl flex items-center justify-center text-white font-bold text-2xl mb-4">SD</div>
+                    <h3 class="text-lg font-bold text-gray-800 mb-2">ScienceDirect</h3>
+                    <p class="text-sm text-gray-600 mb-4 line-clamp-3">Database komprehensif berisi literatur ilmiah peer-reviewed dari Elsevier, melingkupi riset sains, teknologi, medis, dan ekonomi.</p>
+                    <button class="w-full py-2 bg-gray-50 text-orange-600 border border-orange-200 rounded-lg font-bold text-sm hover:bg-orange-50 transition" onclick="showToast('success', 'Membuka Database', 'Mengalihkan ke ScienceDirect...')">Akses Jurnal <i class="fas fa-external-link-alt text-xs ml-1"></i></button>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition">
+                    <div class="w-16 h-16 bg-telkom-red rounded-xl flex items-center justify-center text-white font-bold text-2xl mb-4"><i class="fas fa-graduation-cap"></i></div>
+                    <h3 class="text-lg font-bold text-gray-800 mb-2">Tel-U Repository</h3>
+                    <p class="text-sm text-gray-600 mb-4 line-clamp-3">Akses repositori internal Telkom University untuk membaca Tugas Akhir, Tesis, dan Disertasi mahasiswa secara digital.</p>
+                    <button class="w-full py-2 bg-gray-50 text-telkom-red border border-red-200 rounded-lg font-bold text-sm hover:bg-red-50 transition" onclick="showToast('success', 'Membuka Repositori', 'Memuat repository institusi...')">Akses Repositori <i class="fas fa-external-link-alt text-xs ml-1"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== VIEW: LAYANAN LAINNYA ==================== -->
+        <div id="view-layanan" class="view-section">
+            <div class="flex flex-col md:flex-row gap-8">
+                <!-- Sidebar Menu -->
+                <div class="w-full md:w-64 shrink-0">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-2 sticky top-24">
+                        <button onclick="showService('bebas')" id="btn-serv-bebas" class="service-btn w-full text-left px-4 py-3 rounded-lg font-bold text-sm text-telkom-red bg-red-50 mb-1 transition"><i class="fas fa-file-alt w-5"></i> Bebas Pustaka</button>
+                        <button onclick="showService('donasi')" id="btn-serv-donasi" class="service-btn w-full text-left px-4 py-3 rounded-lg font-semibold text-sm text-gray-600 hover:bg-gray-50 mb-1 transition"><i class="fas fa-hand-holding-heart w-5"></i> Donasi Buku</button>
+                        <button onclick="showService('panduan')" id="btn-serv-panduan" class="service-btn w-full text-left px-4 py-3 rounded-lg font-semibold text-sm text-gray-600 hover:bg-gray-50 transition"><i class="fas fa-info-circle w-5"></i> Panduan Mahasiswa</button>
+                    </div>
+                </div>
+
+                <!-- Content Area -->
+                <div class="flex-grow bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+                    
+                    <!-- Content: Bebas Pustaka -->
+                    <div id="content-bebas" class="service-content">
+                        <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b border-gray-100 pb-4">Pengajuan Surat Bebas Pustaka</h2>
+                        <p class="text-sm text-gray-600 mb-6">Surat Bebas Pustaka merupakan syarat wajib bagi mahasiswa tingkat akhir untuk pendaftaran sidang/wisuda. Pastikan Anda memenuhi syarat berikut:</p>
+                        
+                        <div class="bg-gray-50 rounded-lg p-5 border border-gray-200 mb-6">
+                            <ul class="space-y-3 text-sm text-gray-700">
+                                <li class="flex items-start gap-3"><i class="fas fa-check-circle text-green-500 mt-1"></i> Tidak memiliki tunggakan/pinjaman buku fisik yang belum dikembalikan.</li>
+                                <li class="flex items-start gap-3"><i class="fas fa-check-circle text-green-500 mt-1"></i> Tidak memiliki denda keterlambatan aktif.</li>
+                                <li class="flex items-start gap-3"><i class="fas fa-check-circle text-green-500 mt-1"></i> Telah mengunggah (upload) *softcopy* Tugas Akhir ke Tel-U Repository.</li>
+                            </ul>
+                        </div>
+                        <button class="px-6 py-2.5 bg-telkom-red text-white font-bold rounded-lg shadow-md hover:bg-red-800 transition" onclick="showToast('error', 'Akses Ditolak', 'Silakan Login SSO terlebih dahulu untuk mengajukan bebas pustaka.')">Ajukan Sekarang</button>
+                    </div>
+
+                    <!-- Content: Donasi Buku -->
+                    <div id="content-donasi" class="service-content hidden">
+                        <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b border-gray-100 pb-4">Program Donasi Buku</h2>
+                        <p class="text-sm text-gray-600 mb-6">Mari berkontribusi dalam memperkaya literasi di Telkom University. Kami menerima donasi buku fiksi maupun non-fiksi yang masih layak baca.</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            <div class="border border-gray-200 p-4 rounded-lg text-center">
+                                <i class="fas fa-box-open text-3xl text-orange-500 mb-2"></i>
+                                <h4 class="font-bold text-sm mb-1">Drop-off Langsung</h4>
+                                <p class="text-xs text-gray-500">Bawa buku Anda ke Lantai 1 Gedung Open Library pada jam kerja.</p>
+                            </div>
+                            <div class="border border-gray-200 p-4 rounded-lg text-center">
+                                <i class="fas fa-truck text-3xl text-blue-500 mb-2"></i>
+                                <h4 class="font-bold text-sm mb-1">Kirim via Kurir</h4>
+                                <p class="text-xs text-gray-500">Kirimkan ke alamat kampus dengan keterangan "Donasi Open Library".</p>
+                            </div>
+                        </div>
+                        <button class="px-6 py-2.5 border border-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-50 transition" onclick="showToast('success', 'Form Dibuka', 'Menampilkan formulir pendataan donasi...')">Isi Form Pendataan Donasi</button>
+                    </div>
+
+                    <!-- Content: Panduan Mahasiswa -->
+                    <div id="content-panduan" class="service-content hidden">
+                        <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b border-gray-100 pb-4">Panduan Mahasiswa</h2>
+                        <p class="text-sm text-gray-600 mb-6">Unduh panduan penggunaan fasilitas Open Library Telkom University di bawah ini.</p>
+                        
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+                                <div class="flex items-center gap-3">
+                                    <i class="fas fa-file-pdf text-red-500 text-2xl"></i>
+                                    <div>
+                                        <p class="font-bold text-sm text-gray-800">Panduan Peminjaman Buku Fisik</p>
+                                        <p class="text-xs text-gray-500">PDF • 1.2 MB</p>
+                                    </div>
+                                </div>
+                                <button class="text-blue-600 hover:text-blue-800 text-sm font-bold"><i class="fas fa-download"></i> Unduh</button>
+                            </div>
+                            <div class="flex justify-between items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+                                <div class="flex items-center gap-3">
+                                    <i class="fas fa-file-pdf text-red-500 text-2xl"></i>
+                                    <div>
+                                        <p class="font-bold text-sm text-gray-800">Tata Tertib Penggunaan Ruang Diskusi</p>
+                                        <p class="text-xs text-gray-500">PDF • 800 KB</p>
+                                    </div>
+                                </div>
+                                <button class="text-blue-600 hover:text-blue-800 text-sm font-bold"><i class="fas fa-download"></i> Unduh</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- ==================== MODALS & UI CONTROLS ==================== -->
+    <div id="globalOverlay" class="fixed inset-0 bg-gray-900 bg-opacity-60 transition-opacity backdrop-blur-sm z-50 hidden" onclick="closeAllModals()"></div>
+
+    <!-- 0. Modal Login SSO -->
+    <div id="modal-login" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 pointer-events-none">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden pointer-events-auto transform scale-95 opacity-0 transition-all duration-200">
+            <div class="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+                <h3 class="text-lg font-bold text-gray-900"><i class="fas fa-lock text-telkom-red mr-2"></i> Login SSO iGracias</h3>
+                <button onclick="closeAllModals()" class="text-gray-400 hover:text-gray-700 bg-gray-50 hover:bg-gray-100 h-8 w-8 rounded-full transition flex items-center justify-center"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 bg-white">
+                <form id="formLogin" onsubmit="event.preventDefault(); doLogin();" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Username / NIM <span class="text-red-500">*</span></label>
+                        <input type="text" id="loginNIM" required placeholder="Masukkan NIM Anda" class="w-full rounded-lg border border-gray-300 p-2.5 shadow-sm focus:border-telkom-red focus:ring-1 focus:ring-telkom-red outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Password <span class="text-red-500">*</span></label>
+                        <input type="password" id="loginPass" required placeholder="Masukkan Password iGracias" class="w-full rounded-lg border border-gray-300 p-2.5 shadow-sm focus:border-telkom-red focus:ring-1 focus:ring-telkom-red outline-none transition">
+                    </div>
+                    <button type="submit" class="w-full mt-4 py-2.5 bg-telkom-red text-white rounded-lg text-sm font-bold hover:bg-red-700 transition shadow-md active:scale-95 flex justify-center items-center gap-2">
+                        Masuk Sistem
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 1. Modal Reservasi Ruang -->
+    <div id="modal-reservasi" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 pointer-events-none">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden pointer-events-auto transform scale-95 opacity-0 transition-all duration-200">
+            <div class="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-white">
+                <div class="flex items-center gap-3">
+                    <div class="bg-red-50 text-telkom-red p-2 rounded-lg h-10 w-10 flex items-center justify-center"><i class="far fa-calendar-check text-lg"></i></div>
+                    <h3 class="text-lg font-bold text-gray-900">Form Reservasi Ruang</h3>
+                </div>
+                <button onclick="closeAllModals()" class="text-gray-400 hover:text-gray-700 bg-gray-50 hover:bg-gray-100 h-8 w-8 rounded-full transition flex items-center justify-center"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <div class="p-6 bg-white overflow-y-auto max-h-[70vh]">
+                <form id="resForm" class="space-y-5" onsubmit="event.preventDefault(); submitReservation();">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Pilih Ruangan <span class="text-red-500">*</span></label>
+                        <select id="resRuangan" required class="w-full rounded-lg border border-gray-300 p-2.5 shadow-sm focus:border-telkom-red focus:ring-1 focus:ring-red-200 outline-none transition bg-gray-50 cursor-pointer">
+                            <option value="" data-max="0">-- Silakan Pilih Ruangan --</option>
+                            <option value="R1" data-max="6">Ruang Diskusi Lantai 1 - A (Maks. 6 org)</option>
+                            <option value="R2" data-max="8">Ruang Diskusi Lantai 2 - B (Maks. 8 org)</option>
+                            <option value="R3" data-max="20">Ruang Audio Visual (Maks. 20 org)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Tujuan Penggunaan <span class="text-red-500">*</span></label>
+                        <input type="text" id="resTujuan" required placeholder="Contoh: Rapat Koordinasi BEM / Diskusi Tugas Akhir" class="w-full rounded-lg border border-gray-300 p-2.5 shadow-sm focus:border-telkom-red focus:ring-1 focus:ring-red-200 outline-none transition">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-1">Tanggal <span class="text-red-500">*</span></label>
+                            <input type="date" required class="w-full rounded-lg border border-gray-300 p-2.5 shadow-sm focus:border-telkom-red focus:ring-1 focus:ring-red-200 outline-none transition cursor-pointer">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-1">Jumlah Peserta <span class="text-red-500">*</span></label>
+                            <input type="number" id="resPeserta" min="1" placeholder="Cth: 4" required class="w-full rounded-lg border border-gray-300 p-2.5 shadow-sm focus:border-telkom-red focus:ring-1 focus:ring-red-200 outline-none transition">
+                        </div>
+                    </div>
+
+                    <div class="px-6 py-4 bg-gray-50 flex justify-end gap-3 border-t border-gray-100 -mx-6 -mb-6 mt-6">
+                        <button type="button" onclick="closeAllModals()" class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-100 transition focus:outline-none focus:ring-2 focus:ring-gray-200">
+                            Batal
+                        </button>
+                        <button type="submit" class="px-5 py-2.5 bg-telkom-red text-white rounded-lg text-sm font-bold hover:bg-red-700 transition shadow-md active:scale-95 focus:outline-none focus:ring-2 focus:ring-red-300 flex items-center gap-2">
+                            <i class="fas fa-check-circle"></i> Konfirmasi Reservasi
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Modal Koleksi E-Book (Rak Digital) -->
+    <div id="modal-ebook" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 pointer-events-none">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden pointer-events-auto transform scale-95 opacity-0 transition-all duration-200">
+            <div class="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-blue-50">
+                <div class="flex items-center gap-3">
+                    <div class="bg-blue-500 text-white p-2 rounded-lg h-10 w-10 flex items-center justify-center"><i class="fas fa-book-reader text-lg"></i></div>
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900">Rak Digital Anda</h3>
+                        <p class="text-xs text-gray-500">Kelola buku elektronik yang sedang dibaca atau ditandai.</p>
+                    </div>
+                </div>
+                <button onclick="closeAllModals()" class="text-gray-400 hover:text-gray-700 bg-white border border-gray-200 hover:bg-gray-100 h-8 w-8 rounded-full transition flex items-center justify-center"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 bg-white overflow-y-auto max-h-[60vh]">
+                
+                <h4 class="text-sm font-bold text-gray-800 mb-3 border-b border-gray-100 pb-2">Sedang Dibaca</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div class="border border-gray-200 rounded-lg p-4 flex gap-4 items-center">
+                        <div class="w-12 h-16 bg-blue-100 text-blue-500 rounded flex items-center justify-center shrink-0"><i class="fas fa-file-pdf text-xl"></i></div>
+                        <div class="flex-grow">
+                            <h5 class="text-sm font-bold text-gray-800 line-clamp-1">UI/UX Design Principles</h5>
+                            <p class="text-xs text-gray-500 mb-2">Halaman 45 dari 320</p>
+                            <div class="w-full bg-gray-200 rounded-full h-1.5 mb-2"><div class="bg-blue-500 h-1.5 rounded-full" style="width: 15%"></div></div>
+                            <button class="text-xs font-bold text-blue-600 hover:underline">Lanjutkan Membaca</button>
+                        </div>
+                    </div>
+                </div>
+
+                <h4 class="text-sm font-bold text-gray-800 mb-3 border-b border-gray-100 pb-2">Koleksi Tersimpan (Favorit / Ingin Dibaca)</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="border border-gray-200 rounded-lg p-4 flex gap-4 items-center">
+                        <div class="w-12 h-16 bg-gray-100 text-gray-400 rounded flex items-center justify-center shrink-0"><i class="fas fa-book text-xl"></i></div>
+                        <div class="flex-grow">
+                            <div class="flex justify-between items-start">
+                                <h5 class="text-sm font-bold text-gray-800 line-clamp-1">Machine Learning Basics</h5>
+                                <i class="fas fa-heart text-red-500 text-xs"></i>
+                            </div>
+                            <p class="text-[10px] bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded inline-block font-semibold mt-1 mb-2">Ingin Dibaca</p>
+                            <div class="flex gap-2">
+                                <button class="text-xs font-bold text-gray-600 border border-gray-300 px-2 py-1 rounded hover:bg-gray-50">Hapus</button>
+                                <button class="text-xs font-bold text-white bg-telkom-red px-2 py-1 rounded hover:bg-red-800" onclick="showToast('success', 'Berhasil', 'Memuat e-book...')">Mulai Baca</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Modal Status Pinjaman -->
+    <div id="modal-status" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 pointer-events-none">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden pointer-events-auto transform scale-95 opacity-0 transition-all duration-200">
+            <div class="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-green-50">
+                <div class="flex items-center gap-3">
+                    <div class="bg-green-500 text-white p-2 rounded-lg h-10 w-10 flex items-center justify-center"><i class="fas fa-hand-holding-box text-lg"></i></div>
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900">Status Pinjaman Fisik</h3>
+                        <p class="text-xs text-gray-500">Pantau tenggat waktu dan denda buku perpustakaan Anda.</p>
+                    </div>
+                </div>
+                <button onclick="closeAllModals()" class="text-gray-400 hover:text-gray-700 bg-white border border-gray-200 hover:bg-gray-100 h-8 w-8 rounded-full transition flex items-center justify-center"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-0 bg-white overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wider border-b border-gray-200">
+                            <th class="p-4 font-bold">Judul Buku</th>
+                            <th class="p-4 font-bold">Tgl Pinjam</th>
+                            <th class="p-4 font-bold">Tenggat Waktu</th>
+                            <th class="p-4 font-bold text-right">Status / Denda</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-sm divide-y divide-gray-100">
+                        <tr class="hover:bg-gray-50 transition">
+                            <td class="p-4 font-semibold text-gray-800">Pemrograman Web Modern</td>
+                            <td class="p-4 text-gray-600">10 Apr 2026</td>
+                            <td class="p-4 text-gray-600">24 Apr 2026</td>
+                            <td class="p-4 text-right">
+                                <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold whitespace-nowrap">Aman (Sisa 5 Hari)</span>
+                            </td>
+                        </tr>
+                        <tr class="hover:bg-gray-50 transition">
+                            <td class="p-4 font-semibold text-gray-800">Advanced Database Systems</td>
+                            <td class="p-4 text-gray-600">01 Apr 2026</td>
+                            <td class="p-4 text-red-600 font-bold">15 Apr 2026</td>
+                            <td class="p-4 text-right">
+                                <span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold whitespace-nowrap">Terlambat (Rp 2.000)</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="bg-gray-50 p-4 border-t border-gray-200 flex justify-between items-center">
+                <p class="text-sm font-medium text-gray-600">Total Denda Aktif: <span class="font-bold text-red-600">Rp 2.000</span></p>
+                <button class="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-bold hover:bg-black transition shadow-md" onclick="showToast('info', 'Pembayaran', 'Diarahkan ke portal pembayaran denda...')">Bayar Denda</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Modal Tanya Pustakawan (FAQ Layout) -->
+    <div id="modal-tanya" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 pointer-events-none">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden pointer-events-auto transform scale-95 opacity-0 transition-all duration-200">
+            <div class="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-orange-50">
+                <div class="flex items-center gap-3">
+                    <div class="bg-orange-500 text-white p-2 rounded-lg h-10 w-10 flex items-center justify-center"><i class="fas fa-comments text-lg"></i></div>
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900">Bantuan & FAQ Pustakawan</h3>
+                        <p class="text-xs text-gray-500">Pertanyaan yang sering diajukan seputar layanan perpustakaan.</p>
+                    </div>
+                </div>
+                <button onclick="closeAllModals()" class="text-gray-400 hover:text-gray-700 bg-white border border-gray-200 hover:bg-gray-100 h-8 w-8 rounded-full transition flex items-center justify-center"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 bg-white overflow-y-auto max-h-[60vh] space-y-4">
+                <details class="group border border-gray-200 rounded-lg bg-gray-50 cursor-pointer">
+                    <summary class="flex items-center justify-between p-4 font-semibold text-gray-800 text-sm">
+                        Bagaimana cara meminjam buku secara fisik?
+                        <i class="fas fa-chevron-down text-gray-400 group-open:rotate-180 transition"></i>
+                    </summary>
+                    <div class="p-4 pt-0 text-sm text-gray-600 bg-white border-t border-gray-200 rounded-b-lg">
+                        Anda dapat mencari buku melalui menu pencarian. Jika statusnya "Tersedia", catat lokasi rak-nya (misal: Lantai 2 - Rak A). Bawa buku fisik tersebut ke meja sirkulasi atau gunakan mesin peminjaman mandiri dengan memindai KTM Anda.
+                    </div>
+                </details>
+                <details class="group border border-gray-200 rounded-lg bg-gray-50 cursor-pointer">
+                    <summary class="flex items-center justify-between p-4 font-semibold text-gray-800 text-sm">
+                        Bagaimana sistem denda keterlambatan buku?
+                        <i class="fas fa-chevron-down text-gray-400 group-open:rotate-180 transition"></i>
+                    </summary>
+                    <div class="p-4 pt-0 text-sm text-gray-600 bg-white border-t border-gray-200 rounded-b-lg">
+                        Denda keterlambatan dikenakan sebesar Rp 500 per hari untuk setiap buku. Pembayaran denda dapat dilakukan via transfer Bank (Virtual Account) atau langsung di kasir perpustakaan lantai 1.
+                    </div>
+                </details>
+                <div class="mt-6 border-t border-gray-200 pt-6">
+                    <p class="text-sm font-semibold text-gray-800 mb-2">Masih butuh bantuan spesifik?</p>
+                    <button class="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-bold hover:bg-orange-600 transition shadow-md flex items-center gap-2"><i class="fas fa-headset"></i> Mulai Live Chat dengan Pustakawan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION (Visual Output Feedback) -->
+    <div id="toastNotification" class="fixed bottom-6 right-6 bg-gray-900 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 toast-enter z-[110] font-medium pointer-events-none border-l-4 border-green-500">
+        <div id="toastIcon" class="bg-green-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm shrink-0">
+            <i class="fas fa-check"></i>
+        </div>
+        <div>
+            <p id="toastTitle" class="text-sm font-bold">Sukses!</p>
+            <p id="toastDesc" class="text-xs text-gray-300 font-normal mt-0.5">Operasi berhasil dilakukan.</p>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // --- VIEW SWITCHING ---
+        function switchView(viewName, subService = null) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-link').forEach(el => {
+                el.classList.remove('border-telkom-red', 'text-telkom-dark');
+                el.classList.add('border-transparent', 'text-gray-500');
+            });
+            
+            document.getElementById('view-' + viewName).classList.add('active');
+            
+            const activeNav = document.getElementById('nav-' + viewName);
+            if(activeNav) {
+                activeNav.classList.remove('border-transparent', 'text-gray-500');
+                activeNav.classList.add('border-telkom-red', 'text-telkom-dark');
+            }
+
+            const breadcrumbText = {
+                'beranda': 'Eksplorasi & Layanan',
+                'katalog': 'Katalog Koleksi & Hasil Pencarian',
+                'epublications': 'Database Jurnal & E-Publications',
+                'layanan': 'Layanan Lainnya'
+            };
+            document.getElementById('breadcrumb-current').innerText = breadcrumbText[viewName] || 'Halaman';
+
+            if(viewName === 'layanan' && subService) {
+                showService(subService);
+            } else if (viewName === 'layanan') {
+                showService('bebas'); // Default active tab in layanan
+            }
+        }
+
+        // Sub-menu for Layanan Lainnya
+        function showService(serviceId) {
+            // Hide all contents
+            document.querySelectorAll('.service-content').forEach(el => el.classList.add('hidden'));
+            // Reset all buttons styling
+            document.querySelectorAll('.service-btn').forEach(el => {
+                el.classList.remove('text-telkom-red', 'bg-red-50', 'font-bold');
+                el.classList.add('text-gray-600', 'font-semibold');
+            });
+
+            // Show selected content
+            document.getElementById('content-' + serviceId).classList.remove('hidden');
+            // Highlight selected button
+            const activeBtn = document.getElementById('btn-serv-' + serviceId);
+            activeBtn.classList.remove('text-gray-600', 'font-semibold');
+            activeBtn.classList.add('text-telkom-red', 'bg-red-50', 'font-bold');
+        }
+
+        // --- SEARCH BAR BEHAVIOR ---
+        const searchInput = document.getElementById('mainSearchInput');
+        const searchSuggestions = document.getElementById('searchSuggestions');
+
+        searchInput.addEventListener('input', function(e) {
+            if(e.target.value.length > 0) {
+                searchSuggestions.classList.remove('hidden');
+            } else {
+                searchSuggestions.classList.add('hidden');
+            }
+        });
+
+        document.addEventListener('click', function(event) {
+            if (!searchInput.contains(event.target) && !searchSuggestions.contains(event.target)) {
+                searchSuggestions.classList.add('hidden');
+            }
+        });
+
+        function toggleAdvancedSearch() {
+            const panel = document.getElementById('advancedSearch');
+            panel.classList.toggle('hidden');
+        }
+
+        // Execute Search updates the view to Katalog and populates detail section
+        function executeSearch(queryOverride, jenis='Buku Fisik', status='Tersedia', author='Tidak diketahui', year='2024', desc='Tidak ada deskripsi tersedia untuk buku ini.') {
+            // Check Year Validation if using form
+            const advYearInput = document.getElementById('advTahun');
+            if(advYearInput && advYearInput.value !== "" && parseInt(advYearInput.value) < 1900) {
+                showToast('error', 'Tahun Tidak Valid', 'Tahun publikasi minimal adalah 1900.');
+                return;
+            }
+
+            const val = queryOverride || searchInput.value.trim();
+            if(!val) return;
+
+            searchSuggestions.classList.add('hidden');
+            
+            const loader = document.getElementById('systemLoader');
+            document.getElementById('loaderText').innerText = "Mencari data katalog...";
+            loader.classList.remove('hidden');
+            loader.classList.add('flex');
+
+            setTimeout(() => {
+                loader.classList.add('hidden');
+                loader.classList.remove('flex');
+                
+                switchView('katalog');
+                document.getElementById('defaultCatalog').classList.add('hidden');
+                
+                const searchResultsSection = document.getElementById('searchResults');
+                searchResultsSection.classList.remove('hidden');
+                
+                // Populate dynamic data
+                document.getElementById('srTitle').innerText = val;
+                document.getElementById('srAuthor').innerText = author;
+                document.getElementById('srYear').innerText = year;
+                document.getElementById('srDesc').innerText = desc;
+                
+                const statusBadge = document.getElementById('srStatusBadge');
+                statusBadge.innerText = status;
+                if(status.toLowerCase().includes('habis')) {
+                    statusBadge.className = "bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold border border-red-200 whitespace-nowrap";
+                } else if(status.toLowerCase().includes('digital') || jenis === 'E-Book') {
+                    statusBadge.className = "bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold border border-blue-200 whitespace-nowrap";
+                } else {
+                    statusBadge.className = "bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold border border-green-200 whitespace-nowrap";
+                }
+
+                document.getElementById('srLocationWrap').innerHTML = jenis === 'E-Book' ? 
+                    `Akses: <span class="text-blue-600">Digital / E-Book</span> <i class="fas fa-cloud"></i>` : 
+                    `Lokasi: <span>${status.replace('Tersedia', '').trim() || 'Rak Perpustakaan'}</span> <i class="fas fa-map-marker-alt"></i>`;
+
+                const iconElem = document.getElementById('srIcon');
+                if(jenis === 'E-Book') {
+                    iconElem.className = "fas fa-file-pdf text-6xl text-blue-300";
+                    document.getElementById('btnPinjam').classList.add('hidden');
+                    document.getElementById('btnBaca').classList.remove('hidden');
+                } else {
+                    iconElem.className = "fas fa-book text-6xl text-gray-300";
+                    document.getElementById('btnBaca').classList.add('hidden');
+                    document.getElementById('btnPinjam').classList.remove('hidden');
+                }
+
+                // Smooth scroll to top of results
+                searchResultsSection.scrollIntoView({ behavior: 'smooth' });
+                
+            }, 800);
+        }
+
+        // --- MODAL & VISUAL FEEDBACK LOGIC ---
+        const globalOverlay = document.getElementById('globalOverlay');
+        let currentOpenModal = null;
+
+        function openModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (!modal) return;
+            
+            globalOverlay.classList.remove('hidden');
+            modal.classList.remove('hidden');
+            currentOpenModal = modal;
+
+            setTimeout(() => {
+                modal.children[0].classList.remove('scale-95', 'opacity-0');
+                modal.children[0].classList.add('scale-100', 'opacity-100');
+            }, 10);
+        }
+
+        function closeAllModals() {
+            if(currentOpenModal) {
+                currentOpenModal.children[0].classList.remove('scale-100', 'opacity-100');
+                currentOpenModal.children[0].classList.add('scale-95', 'opacity-0');
+                
+                setTimeout(() => {
+                    currentOpenModal.classList.add('hidden');
+                    globalOverlay.classList.add('hidden');
+                    currentOpenModal = null;
+                }, 200);
+            }
+        }
+
+        function showToast(type, title, desc) {
+            const toast = document.getElementById('toastNotification');
+            const iconBox = document.getElementById('toastIcon');
+            
+            document.getElementById('toastTitle').innerText = title;
+            document.getElementById('toastDesc').innerText = desc;
+
+            // Reset borders and colors
+            toast.classList.remove('border-green-500', 'border-red-500', 'border-blue-500');
+            iconBox.classList.remove('bg-green-500', 'bg-red-500', 'bg-blue-500');
+
+            if(type === 'error') {
+                toast.classList.add('border-red-500');
+                iconBox.classList.add('bg-red-500');
+                iconBox.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+            } else if(type === 'info') {
+                toast.classList.add('border-blue-500');
+                iconBox.classList.add('bg-blue-500');
+                iconBox.innerHTML = '<i class="fas fa-info"></i>';
+            } else {
+                toast.classList.add('border-green-500');
+                iconBox.classList.add('bg-green-500');
+                iconBox.innerHTML = '<i class="fas fa-check"></i>';
+            }
+
+            toast.classList.remove('toast-enter');
+            toast.classList.add('toast-active');
+            
+            setTimeout(() => {
+                toast.classList.remove('toast-active');
+                toast.classList.add('toast-enter');
+            }, 4000);
+        }
+
+        // --- LOGIN SSO LOGIC ---
+        let isLoggedIn = false;
+        function doLogin() {
+            const nim = document.getElementById('loginNIM').value;
+            const pass = document.getElementById('loginPass').value;
+            
+            if(nim && pass) {
+                closeAllModals();
+                
+                const loader = document.getElementById('systemLoader');
+                document.getElementById('loaderText').innerText = "Autentikasi iGracias...";
+                loader.classList.remove('hidden');
+                loader.classList.add('flex');
+
+                setTimeout(() => {
+                    loader.classList.add('hidden');
+                    loader.classList.remove('flex');
+                    isLoggedIn = true;
+                    
+                    const authSection = document.getElementById('authSection');
+                    // Ganti dengan Profil + Dropdown Logout
+                    authSection.innerHTML = `
+                        <div class="relative group cursor-pointer">
+                            <div class="flex items-center gap-3 bg-gray-50 px-4 py-2 rounded-lg border border-gray-200">
+                                <div class="w-8 h-8 bg-telkom-red text-white rounded-full flex items-center justify-center font-bold text-sm">MA</div>
+                                <div class="text-left leading-tight hidden md:block">
+                                    <p class="text-sm font-bold text-gray-800">${nim}</p>
+                                    <p class="text-[10px] text-gray-500 uppercase tracking-wide">Mahasiswa</p>
+                                </div>
+                            </div>
+                            <div class="absolute right-0 top-full mt-1 w-48 bg-white shadow-xl border border-gray-100 rounded-lg py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                                <button onclick="openModal('modal-ebook')" class="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"><i class="fas fa-bookmark w-5 text-gray-400"></i> Rak Digital / Koleksi</button>
+                                <div class="border-t border-gray-100 my-1"></div>
+                                <button onclick="doLogout()" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-bold"><i class="fas fa-sign-out-alt w-5"></i> Keluar (Logout)</button>
+                            </div>
+                        </div>
+                    `;
+                    showToast('success', 'Login SSO Berhasil', 'Selamat datang di portal Open Library.');
+                }, 1200);
+            }
+        }
+
+        function doLogout() {
+            isLoggedIn = false;
+            const authSection = document.getElementById('authSection');
+            authSection.innerHTML = `
+                <button onclick="openModal('modal-login')" class="bg-gray-100 hover:bg-gray-200 text-telkom-dark px-4 py-2 rounded-md text-sm font-medium transition flex items-center gap-2 border border-gray-200 shadow-sm active:scale-95">
+                    <i class="far fa-user-circle text-lg text-gray-600"></i> Login SSO
+                </button>
+            `;
+            showToast('info', 'Logout Berhasil', 'Anda telah keluar dari sesi.');
+        }
+
+        // --- RESERVATION VALIDATION LOGIC ---
+        function submitReservation() {
+            const selectEl = document.getElementById('resRuangan');
+            const pesertaEl = document.getElementById('resPeserta');
+            
+            if(selectEl.selectedIndex <= 0) return;
+
+            const maxCapacity = parseInt(selectEl.options[selectEl.selectedIndex].getAttribute('data-max'));
+            const inputPeserta = parseInt(pesertaEl.value);
+
+            if (inputPeserta > maxCapacity) {
+                showToast('error', 'Kapasitas Berlebih', `Ruangan yang dipilih maksimal untuk ${maxCapacity} orang.`);
+                pesertaEl.focus();
+                return;
+            }
+
+            closeAllModals();
+            showToast('success', 'Reservasi Berhasil!', 'Detail peminjaman telah dikirim ke email Anda.');
+            document.getElementById('resForm').reset();
+        }
+    </script>
+</body>
+</html>
